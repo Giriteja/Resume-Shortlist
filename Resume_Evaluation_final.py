@@ -306,6 +306,7 @@ def main():
                         st.dataframe(results_df, use_container_width=True)
 
                         st.subheader("Detailed Reports")
+                        st.write(results_df)
                         for _, row in results_df.iterrows():
                             with st.expander(f"Detailed Report - {row['resume_file']}"):
                                 evaluation = {
