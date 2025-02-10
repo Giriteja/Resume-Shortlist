@@ -210,6 +210,9 @@ class ClaudeResumeEvaluator:
                 df[f"{criterion}_score"] = df[criterion].apply(
                     lambda x: float(x.get("score", 0)) if isinstance(x, dict) else 0.0
                 )
+                df[f"{criterion}_justification"] = df[criterion].apply(
+                    lambda x: float(x.get("justification", 0)) if isinstance(x, dict) else 0.0
+                )
 
         # Organize columns
         score_cols = ["total_score"] + [
@@ -312,6 +315,7 @@ def main():
                                 for criterion in evaluator.criteria.weights.keys():
                                     evaluation[criterion] = {
                                         "score": row[f"{criterion}_score"]
+                                        "justification": row[f"{criterion}_justification"]
                                     }
                                 st.text(evaluator.generate_detailed_report(evaluation))
                     else:
