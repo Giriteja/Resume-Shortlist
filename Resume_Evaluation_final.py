@@ -234,31 +234,31 @@ class ClaudeResumeEvaluator:
     
         return result_df
     
-def generate_detailed_report(self, evaluation: Dict) -> str:
-    """Generate detailed evaluation report with scores and justifications."""
-    if not evaluation:
-        return "No evaluation data available."
-
-    report = [
-        f"Resume Evaluation Report: {evaluation.get('resume_file', 'Unknown')}",
-        "=" * 50,
-        f"\nOverall Score: {evaluation.get('total_score', 0):.2f}/1.00\n",
-        "\nDetailed Criteria Evaluation:",
-    ]
-
-    for metric, weight in self.criteria.weights.items():
-        score = evaluation.get(f"{metric}_score", 0)
-        justification = evaluation.get(f"{metric}_justification", "No justification provided")
-        
-        report.extend(
-            [
-                f"\n{metric.replace('_', ' ').title()} (Weight: {weight*100}%)",
-                f"Score: {score:.2f}/1.00",
-                f"Analysis: {justification}",
-            ]
-        )
-
-    return "\n".join(report)
+    def generate_detailed_report(self, evaluation: Dict) -> str:
+        """Generate detailed evaluation report with scores and justifications."""
+        if not evaluation:
+            return "No evaluation data available."
+    
+        report = [
+            f"Resume Evaluation Report: {evaluation.get('resume_file', 'Unknown')}",
+            "=" * 50,
+            f"\nOverall Score: {evaluation.get('total_score', 0):.2f}/1.00\n",
+            "\nDetailed Criteria Evaluation:",
+        ]
+    
+        for metric, weight in self.criteria.weights.items():
+            score = evaluation.get(f"{metric}_score", 0)
+            justification = evaluation.get(f"{metric}_justification", "No justification provided")
+            
+            report.extend(
+                [
+                    f"\n{metric.replace('_', ' ').title()} (Weight: {weight*100}%)",
+                    f"Score: {score:.2f}/1.00",
+                    f"Analysis: {justification}",
+                ]
+            )
+    
+        return "\n".join(report)
 
 
 def main():
