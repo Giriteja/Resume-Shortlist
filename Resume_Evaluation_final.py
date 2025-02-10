@@ -211,7 +211,7 @@ class ClaudeResumeEvaluator:
                     lambda x: float(x.get("score", 0)) if isinstance(x, dict) else 0.0
                 )
                 df[f"{criterion}_justification"] = df[criterion].apply(
-                    lambda x: float(x.get("justification", 0)) if isinstance(x, dict) else 0.0
+                    lambda x: x.get("justification", "No Data") if isinstance(x, dict) else "No justification data"
                 )
 
         # Organize columns
