@@ -68,11 +68,11 @@ class ClaudeResumeEvaluator:
     
     "assessment_expertise": "Skills in evaluating learning outcomes, creating assessment items, and understanding various assessment formats suitable for K-12 learners.",
     
-    "digital_literacy": "Proficiency in reviewing and preparing content for multiple formats including digital platforms, interactive materials, and multimedia resources.",
+    "digital_literacy": "Proficiency in reviewing and preparing content for multiple formats including digital platforms, 3D models review and feedback,interactive materials, and multimedia resources.",
     
     "differentiation_skills": "Ability to review and suggest modifications for diverse learners, including special education, gifted students, and English language learners.",
     
-    "curriculum_alignment": "Experience in mapping content to state/national standards, ensuring vertical alignment across grade levels, and maintaining scope and sequence.",
+    "curriculum_alignment": "Experience in mapping content to state/national standards,NCERT sylabus ensuring vertical alignment across grade levels, and maintaining scope and sequence.",
     
     "review_experience": "Track record of providing constructive feedback, maintaining quality standards, and collaborating with content development teams."
 }
@@ -246,7 +246,7 @@ class ClaudeResumeEvaluator:
             if isinstance(metric_data, dict):
                 score = metric_data.get("score", 0)
                 justification = metric_data.get(
-                    "justification", "No justification provided"
+                    "justification"
                 )
                 report.extend(
                     [
