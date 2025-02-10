@@ -315,7 +315,7 @@ def main():
                                 }
                                 for criterion in evaluator.criteria.weights.keys():
                                     evaluation[criterion] = {
-                                        "score": row[f"{criterion}_score"]
+                                        "score": row[f"{criterion}_score"],
                                         "justification": row[f"{criterion}_justification"]
                                     }
                                 st.text(evaluator.generate_detailed_report(evaluation))
