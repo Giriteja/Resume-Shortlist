@@ -1,1 +1,3 @@
-pip install anthropic pandas PyPDF2
+anthropic
+pandas
+PyPDF2
