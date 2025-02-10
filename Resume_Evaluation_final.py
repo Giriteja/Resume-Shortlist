@@ -199,67 +199,66 @@ class ClaudeResumeEvaluator:
         return self._format_results(pd.DataFrame(results))
 
     def _format_results(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Format and organize results DataFrame."""
+        """Format and organize results DataFrame including both scores and justifications."""
         if df.empty:
             return df
-
-        # Extract scores from nested dictionaries
-        st.write(df)
+    
+        # Extract scores and justifications from nested dictionaries
         for criterion in self.criteria.weights.keys():
             if criterion in df.columns:
+                # Extract scores
                 df[f"{criterion}_score"] = df[criterion].apply(
                     lambda x: float(x.get("score", 0)) if isinstance(x, dict) else 0.0
                 )
+                # Extract justifications
                 df[f"{criterion}_justification"] = df[criterion].apply(
-                    lambda x: x.get("justification", "No Data") if isinstance(x, dict) else "No justification data"
+                    lambda x: x.get("justification", "") if isinstance(x, dict) else ""
                 )
-
+    
         # Organize columns
         score_cols = ["total_score"] + [
             f"{c}_score" for c in self.criteria.weights.keys()
         ]
+        justification_cols = [
+            f"{c}_justification" for c in self.criteria.weights.keys()
+        ]
         basic_cols = ["resume_file"]
-
+    
         # Arrange columns and sort by total score
-        final_cols = basic_cols + score_cols
+        final_cols = basic_cols + score_cols + justification_cols
         result_df = df[final_cols].sort_values("total_score", ascending=False)
-
+    
         # Round numerical columns
         for col in score_cols:
             result_df[col] = result_df[col].round(3)
-
+    
         return result_df
+    
+def generate_detailed_report(self, evaluation: Dict) -> str:
+    """Generate detailed evaluation report with scores and justifications."""
+    if not evaluation:
+        return "No evaluation data available."
 
-    def generate_detailed_report(self, evaluation: Dict) -> str:
-        """Generate detailed evaluation report."""
-        if not evaluation:
-            return "No evaluation data available."
+    report = [
+        f"Resume Evaluation Report: {evaluation.get('resume_file', 'Unknown')}",
+        "=" * 50,
+        f"\nOverall Score: {evaluation.get('total_score', 0):.2f}/1.00\n",
+        "\nDetailed Criteria Evaluation:",
+    ]
 
-        print(evaluation)
+    for metric, weight in self.criteria.weights.items():
+        score = evaluation.get(f"{metric}_score", 0)
+        justification = evaluation.get(f"{metric}_justification", "No justification provided")
+        
+        report.extend(
+            [
+                f"\n{metric.replace('_', ' ').title()} (Weight: {weight*100}%)",
+                f"Score: {score:.2f}/1.00",
+                f"Analysis: {justification}",
+            ]
+        )
 
-        report = [
-            f"Resume Evaluation Report: {evaluation.get('resume_file', 'Unknown')}",
-            "=" * 50,
-            f"\nOverall Score: {evaluation.get('total_score', 0):.2f}/1.00\n",
-            "\nDetailed Criteria Evaluation:",
-        ]
-
-        for metric, weight in self.criteria.weights.items():
-            metric_data = evaluation.get(metric, {})
-            st.write(metric_data)
-            if isinstance(metric_data, dict):
-                score = metric_data.get("score", 0)
-                
-                justification = metric_data.get("justification")
-                report.extend(
-                    [
-                        f"\n{metric.replace('_', ' ').title()} (Weight: {weight*100}%)",
-                        f"Score: {score:.2f}/1.00",
-                        f"Analysis: {justification}",
-                    ]
-                )
-
-        return "\n".join(report)
+    return "\n".join(report)
 
 
 def main():
@@ -307,17 +306,15 @@ def main():
 
                         st.subheader("Detailed Reports")
                         st.write(results_df)
-                        for _, row in results_df.iterrows():
+                       for _, row in results_df.iterrows():
                             with st.expander(f"Detailed Report - {row['resume_file']}"):
                                 evaluation = {
                                     "resume_file": row["resume_file"],
-                                    "total_score": row["total_score"],
+                                    "total_score": row["total_score"]
                                 }
                                 for criterion in evaluator.criteria.weights.keys():
-                                    evaluation[criterion] = {
-                                        "score": row[f"{criterion}_score"],
-                                        "justification": row[f"{criterion}_justification"]
-                                    }
+                                    evaluation[f"{criterion}_score"] = row[f"{criterion}_score"]
+                                    evaluation[f"{criterion}_justification"] = row[f"{criterion}_justification"]
                                 st.text(evaluator.generate_detailed_report(evaluation))
                     else:
                         st.warning(
