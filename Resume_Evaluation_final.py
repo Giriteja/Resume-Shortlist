@@ -20,15 +20,15 @@ class EvaluationCriteria:
 
     def __post_init__(self):
         self.weights = {
-            "skills_match": 0.20,
-            "experience_relevance": 0.20,
-            "education_match": 0.10,
-            "communication_skills": 0.10,
-            "achievements": 0.15,
-            "leadership_potential": 0.10,
-            "cultural_fit": 0.05,
-            "project_experience": 0.05,
-            "technical_expertise": 0.05
+            "subject_expertise": 0.25,        # Critical importance for content accuracy and standards alignment
+            "pedagogical_knowledge": 0.20,    # Essential for understanding effective educational approaches
+            "content_development": 0.15,      # Key for evaluating and creating materials
+            "educational_background": 0.10,   # Formal qualifications and credentials
+            "assessment_expertise": 0.10,     # Important for evaluating learning outcomes
+            "digital_literacy": 0.05,         # Necessary for modern content formats
+            "differentiation_skills": 0.05,   # Valuable for inclusive content
+            "curriculum_alignment": 0.05,     # Important for standards compliance
+            "review_experience": 0.05         # Previous experience in similar role
         }
 
 
@@ -58,16 +58,24 @@ class ClaudeResumeEvaluator:
     def _create_evaluation_prompt(self, resume_text: str, job_description: str) -> str:
         """Create the evaluation prompt for Claude."""
         criteria_descriptions = {
-            "skills_match": "Technical and soft skills alignment with job requirements",
-            "experience_relevance": "Relevance and depth of work history",
-            "education_match": "Educational qualifications fit",
-            "communication_skills": "Quality of writing, presentation, and clarity",
-            "achievements": "Quantifiable impacts and relevant accomplishments",
-            "leadership_potential": "Evidence of leadership, initiative, and team management",
-            "cultural_fit": "Values alignment and soft skills indication",
-            "project_experience": "Relevant project work and deliverables",
-            "technical_expertise": "Depth of technical knowledge in required areas",
-        }
+    "subject_expertise": "Deep knowledge and understanding of K-12 curriculum standards, learning objectives, and subject matter across relevant grade levels. Demonstrated ability to evaluate content accuracy and age-appropriateness.",
+    
+    "pedagogical_knowledge": "Understanding of effective teaching methodologies, learning theories, and instructional design principles. Ability to assess content structure, scaffolding, and differentiation strategies.",
+    
+    "content_development": "Experience in creating, reviewing, or adapting educational materials for K-12 students. Proven track record of developing engaging, standards-aligned content.",
+    
+    "educational_background": "Relevant academic qualifications in education, curriculum development, or subject-specific areas. Teaching credentials or certifications are valued.",
+    
+    "assessment_expertise": "Skills in evaluating learning outcomes, creating assessment items, and understanding various assessment formats suitable for K-12 learners.",
+    
+    "digital_literacy": "Proficiency in reviewing and preparing content for multiple formats including digital platforms, interactive materials, and multimedia resources.",
+    
+    "differentiation_skills": "Ability to review and suggest modifications for diverse learners, including special education, gifted students, and English language learners.",
+    
+    "curriculum_alignment": "Experience in mapping content to state/national standards, ensuring vertical alignment across grade levels, and maintaining scope and sequence.",
+    
+    "review_experience": "Track record of providing constructive feedback, maintaining quality standards, and collaborating with content development teams."
+}
 
         return f"""As an expert HR professional, evaluate this resume against the job description.
         For each criterion, provide a numerical score between 0.0 and 1.0 and a brief justification.
@@ -83,15 +91,16 @@ class ClaudeResumeEvaluator:
 
         Return your evaluation in this exact JSON format:
         {{
-            "skills_match": {{"score": 0.0, "justification": "explanation"}},
-            "experience_relevance": {{"score": 0.0, "justification": "explanation"}},
-            "education_match": {{"score": 0.0, "justification": "explanation"}},
+            "subject_expertise" : {{"score": 0.0, "justification": "explanation"}},
+            "pedagogical_knowledge": {{"score": 0.0, "justification": "explanation"}},
+            "content_development": {{"score": 0.0, "justification": "explanation"}},
+            "educational_background": {{"score": 0.0, "justification": "explanation"}},
             "communication_skills": {{"score": 0.0, "justification": "explanation"}},
-            "achievements": {{"score": 0.0, "justification": "explanation"}},
-            "leadership_potential": {{"score": 0.0, "justification": "explanation"}},
-            "cultural_fit": {{"score": 0.0, "justification": "explanation"}},
-            "project_experience": {{"score": 0.0, "justification": "explanation"}},
-            "technical_expertise": {{"score": 0.0, "justification": "explanation"}}
+            "assessment_expertise": {{"score": 0.0, "justification": "explanation"}},
+            "digital_literacy": {{"score": 0.0, "justification": "explanation"}},
+            "differentiation_skills": {{"score": 0.0, "justification": "explanation"}},
+            "curriculum_alignment": {{"score": 0.0, "justification": "explanation"}},
+            "review_experience": {{"score": 0.0, "justification": "explanation"}}
         }}
         """
 
