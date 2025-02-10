@@ -129,6 +129,7 @@ class ClaudeResumeEvaluator:
 
             # Extract the JSON response and validate it
             try:
+                print(json.loads(response.content[0].text))
                 evaluation = json.loads(response.content[0].text)
                 # Validate that all required fields are present
                 required_fields = set(self.criteria.weights.keys())
