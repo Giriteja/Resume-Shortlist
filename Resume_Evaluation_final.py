@@ -289,7 +289,7 @@ def main():
 
     with col2:
         resume_files = st.file_uploader(
-            "Upload Resumes (PDF)", type="pdf", accept_multiple_files=True
+            "Upload Resumes (PDF)", type=['pdf', 'doc', 'docx'], accept_multiple_files=True
         )
 
     if job_description_file and resume_files:
