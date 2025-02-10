@@ -251,7 +251,7 @@ def main():
     st.title("Resume Evaluator")
 
     # Get API key from environment or Streamlit secrets
-    api_key = ""
+    api_key = st.secrets["ANTHROPIC_API_KEY"]
 
     if not api_key:
         st.error(
