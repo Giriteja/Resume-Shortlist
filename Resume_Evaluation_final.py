@@ -129,7 +129,7 @@ class ClaudeResumeEvaluator:
 
             # Extract the JSON response and validate it
             try:
-                st.write(json.loads(response.content[0].text))
+                #st.write(json.loads(response.content[0].text))
                 evaluation = json.loads(response.content[0].text)
                 # Validate that all required fields are present
                 required_fields = set(self.criteria.weights.keys())
@@ -305,7 +305,7 @@ def main():
                         st.dataframe(results_df, use_container_width=True)
 
                         st.subheader("Detailed Reports")
-                        st.write(results_df)
+                        #st.write(results_df)
                         for _, row in results_df.iterrows():
                             with st.expander(f"Detailed Report - {row['resume_file']}"):
                                 evaluation = {
