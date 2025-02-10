@@ -241,6 +241,7 @@ class ClaudeResumeEvaluator:
 
         for metric, weight in self.criteria.weights.items():
             metric_data = evaluation.get(metric, {})
+            print(metric_data)
             if isinstance(metric_data, dict):
                 score = metric_data.get("score", 0)
                 justification = metric_data.get(
