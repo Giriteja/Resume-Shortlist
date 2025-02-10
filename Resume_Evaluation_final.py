@@ -114,7 +114,7 @@ class ClaudeResumeEvaluator:
         try:
             response = self.client.messages.create(
                 model="claude-3-sonnet-20240229",
-                max_tokens=8000,
+                max_tokens=4000,
                 temperature=0,
                 system="You are an expert HR professional. Provide objective, evidence-based evaluations.",
                 messages=[
