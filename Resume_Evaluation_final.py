@@ -28,8 +28,7 @@ class EvaluationCriteria:
             "leadership_potential": 0.10,
             "cultural_fit": 0.05,
             "project_experience": 0.05,
-            "technical_expertise": 0.05,
-            "Companies"
+            "technical_expertise": 0.05
         }
 
 
