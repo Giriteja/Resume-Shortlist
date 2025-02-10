@@ -245,9 +245,7 @@ class ClaudeResumeEvaluator:
             print(metric_data)
             if isinstance(metric_data, dict):
                 score = metric_data.get("score", 0)
-                justification = metric_data.get(
-                    "justification"
-                )
+                justification = metric_data.get("justification")
                 report.extend(
                     [
                         f"\n{metric.replace('_', ' ').title()} (Weight: {weight*100}%)",
