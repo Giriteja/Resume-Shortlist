@@ -204,6 +204,7 @@ class ClaudeResumeEvaluator:
             return df
 
         # Extract scores from nested dictionaries
+        st.write(df)
         for criterion in self.criteria.weights.keys():
             if criterion in df.columns:
                 df[f"{criterion}_score"] = df[criterion].apply(
