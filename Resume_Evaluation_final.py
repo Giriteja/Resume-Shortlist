@@ -29,7 +29,7 @@ class EvaluationCriteria:
             "cultural_fit": 0.05,
             "project_experience": 0.05,
             "technical_expertise": 0.05,
-            "Companies "
+            "Companies"
         }
 
 
