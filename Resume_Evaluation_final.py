@@ -417,7 +417,7 @@ def main():
                     if not results_df.empty:
                         st.subheader("Evaluation Results")
                         st.dataframe(results_df, use_container_width=True)
-                        create_analytics_dashboard(results_df)
+                        evaluator.create_analytics_dashboard(results_df)
 
                         st.subheader("Detailed Reports")
                         #st.write(results_df)
