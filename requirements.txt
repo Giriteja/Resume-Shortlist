@@ -1,3 +1,4 @@
 anthropic
 pandas
 PyPDF2
+plotly
