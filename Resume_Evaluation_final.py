@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import streamlit as st
 from logging import getLogger
+import plotly.graph_objects as go
+import plotly.express as px
 
 logger = getLogger(__name__)
 
@@ -260,7 +262,7 @@ class ClaudeResumeEvaluator:
     
         return "\n".join(report)
 
-    def create_analytics_dashboard(results_df: pd.DataFrame):
+    def create_analytics_dashboard(self,results_df: pd.DataFrame):
         """Create an analytics dashboard for resume evaluation results."""
         st.subheader("Analytics Dashboard")
         
