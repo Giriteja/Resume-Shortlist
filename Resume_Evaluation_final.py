@@ -260,6 +260,120 @@ class ClaudeResumeEvaluator:
     
         return "\n".join(report)
 
+    def create_analytics_dashboard(results_df: pd.DataFrame):
+        """Create an analytics dashboard for resume evaluation results."""
+        st.subheader("Analytics Dashboard")
+        
+        # Layout with tabs
+        tab1, tab2, tab3 = st.tabs(["Overview", "Detailed Analysis", "Comparative View"])
+        
+        with tab1:
+            # Overview section
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Average scores by criterion
+                st.subheader("Average Scores by Criterion")
+                score_cols = [col for col in results_df.columns if col.endswith('_score') and col != 'total_score']
+                avg_scores = results_df[score_cols].mean().round(3)
+                
+                # Create a bar chart for average scores
+                chart_data = pd.DataFrame({
+                    'Criterion': [col.replace('_score', '').replace('_', ' ').title() for col in score_cols],
+                    'Average Score': avg_scores.values
+                })
+                
+                st.bar_chart(chart_data.set_index('Criterion'))
+            
+            with col2:
+                # Distribution of total scores
+                st.subheader("Total Score Distribution")
+                fig_hist = {
+                    'data': [{
+                        'type': 'histogram',
+                        'x': results_df['total_score'],
+                        'nbinsx': 10,
+                        'name': 'Total Scores'
+                    }],
+                    'layout': {
+                        'xaxis': {'title': 'Score'},
+                        'yaxis': {'title': 'Count'}
+                    }
+                }
+                st.plotly_chart(fig_hist, use_container_width=True)
+        
+        with tab2:
+            # Detailed analysis section
+            st.subheader("Individual Criteria Breakdown")
+            
+            # Select candidate for detailed view
+            selected_candidate = st.selectbox(
+                "Select Resume to Analyze",
+                results_df['resume_file'].tolist()
+            )
+            
+            if selected_candidate:
+                candidate_data = results_df[results_df['resume_file'] == selected_candidate].iloc[0]
+                
+                # Radar chart for candidate scores
+                score_cols = [col for col in results_df.columns if col.endswith('_score') and col != 'total_score']
+                
+                fig_radar = {
+                    'data': [{
+                        'type': 'scatterpolar',
+                        'r': [candidate_data[col] for col in score_cols],
+                        'theta': [col.replace('_score', '').replace('_', ' ').title() for col in score_cols],
+                        'fill': 'toself',
+                        'name': selected_candidate
+                    }],
+                    'layout': {
+                        'polar': {'radialaxis': {'range': [0, 1]}},
+                        'showlegend': True
+                    }
+                }
+                st.plotly_chart(fig_radar, use_container_width=True)
+                
+                # Display justifications in an organized way
+                st.subheader("Detailed Justifications")
+                for criterion in score_cols:
+                    base_criterion = criterion.replace('_score', '')
+                    with st.expander(f"{base_criterion.replace('_', ' ').title()}"):
+                        col1, col2 = st.columns([1, 3])
+                        with col1:
+                            st.metric("Score", f"{candidate_data[criterion]:.2f}")
+                        with col2:
+                            st.write(candidate_data[f"{base_criterion}_justification"])
+        
+        with tab3:
+            # Comparative analysis section
+            st.subheader("Candidate Comparison")
+            
+            # Multi-select for candidates
+            selected_candidates = st.multiselect(
+                "Select Candidates to Compare",
+                results_df['resume_file'].tolist(),
+                default=results_df['resume_file'].tolist()[:3]  # Default to first 3
+            )
+            
+            if selected_candidates:
+                comparison_data = results_df[results_df['resume_file'].isin(selected_candidates)]
+                
+                # Create comparison chart
+                fig_comparison = {
+                    'data': [{
+                        'type': 'bar',
+                        'x': comparison_data['resume_file'],
+                        'y': comparison_data[col],
+                        'name': col.replace('_score', '').replace('_', ' ').title()
+                    } for col in score_cols],
+                    'layout': {
+                        'barmode': 'group',
+                        'xaxis': {'title': 'Candidates'},
+                        'yaxis': {'title': 'Scores', 'range': [0, 1]}
+                    }
+                }
+                st.plotly_chart(fig_comparison, use_container_width=True)
+
 
 def main():
     st.set_page_config(page_title="Resume Evaluator", layout="wide")
@@ -303,6 +417,7 @@ def main():
                     if not results_df.empty:
                         st.subheader("Evaluation Results")
                         st.dataframe(results_df, use_container_width=True)
+                        create_analytics_dashboard(results_df)
 
                         st.subheader("Detailed Reports")
                         #st.write(results_df)
