@@ -378,6 +378,18 @@ class ClaudeResumeEvaluator:
 
 
 def main():
+
+    def displayPDF(file):
+        # Opening file from file path
+        with open(file, "rb") as f:
+            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+    
+        # Embedding PDF in HTML
+        pdf_display = F'<embed src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf">'
+    
+        # Displaying File
+        st.markdown(pdf_display, unsafe_allow_html=True)
+    
     st.set_page_config(page_title="Resume Evaluator", layout="wide")
     st.title("Resume Evaluator")
 
@@ -437,6 +449,8 @@ def main():
                         st.warning(
                             "No evaluations were generated. Please check the uploaded files and try again."
                         )
+
+                    displayPDF()
 
                 except Exception as e:
                     st.error(f"An error occurred during evaluation: {str(e)}")
