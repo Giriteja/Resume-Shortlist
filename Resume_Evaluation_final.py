@@ -20,8 +20,9 @@ class DynamicDomainEvaluator:
         self.selected_metrics = {}
         self.weights = {}
 
-    def get_domain_metrics(self, domain: str, role_description: str = "") -> Dict[str, str]:
-        """Get metrics for any domain using Claude"""
+    @st.cache_data
+    def get_domain_metrics(_self, domain: str, role_description: str = "") -> Dict[str, str]:
+        """Get metrics for any domain using Claude - cached version"""
         prompt = f"""As an expert HR professional, generate relevant evaluation metrics for the {domain} domain.
         Additional role context: {role_description}
         
@@ -38,7 +39,7 @@ class DynamicDomainEvaluator:
         Focus on domain-specific technical and professional competencies."""
 
         try:
-            response = self.client.messages.create(
+            response = _self.client.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=1000,
                 temperature=0,
@@ -46,7 +47,6 @@ class DynamicDomainEvaluator:
             )
             
             metrics = json.loads(response.content[0].text)
-            self.domain_metrics = metrics
             return metrics
         except Exception as e:
             st.error(f"Error generating metrics: {str(e)}")
@@ -221,7 +221,7 @@ class ClaudeResumeEvaluator:
             result_df[col] = result_df[col].round(3)
         
         return result_df
-
+        
 def main():
     st.set_page_config(page_title="Dynamic Resume Evaluator", layout="wide")
     st.title("Dynamic Resume Evaluator")
@@ -247,92 +247,92 @@ def main():
             help="Add specific details about the role to get more targeted evaluation metrics"
         )
 
-    # Generate metrics when domain is entered
+    # Generate metrics when domain is entered - now cached
     if domain:
-        with st.spinner("Generating domain-specific evaluation metrics..."):
-            domain_metrics = domain_evaluator.get_domain_metrics(domain, role_description)
+        # This will only run once for each unique combination of domain and role_description
+        domain_metrics = domain_evaluator.get_domain_metrics(domain, role_description)
             
-            if domain_metrics:
-                st.subheader("Customize Evaluation Metrics")
-                st.info("Adjust weights (0-1) for each metric. Set to 0 to exclude a metric.")
-                
-                # Display metrics in two columns
-                col1, col2 = st.columns(2)
-                metric_weights = {}
-                
-                for i, (metric, description) in enumerate(domain_metrics.items()):
-                    with col1 if i < len(domain_metrics)/2 else col2:
-                        weight = st.slider(
-                            f"{metric.replace('_', ' ').title()}",
-                            0.0,
-                            1.0,
-                            0.5,
-                            0.1,
-                            help=description
-                        )
-                        metric_weights[metric] = weight
-
-                # Set evaluation metrics
-                domain_evaluator.set_evaluation_metrics(metric_weights)
-
-                # File uploaders
-                st.subheader("Upload Documents")
-                col1, col2 = st.columns(2)
-                with col1:
-                    job_description_file = st.file_uploader(
-                        "Upload Job Description (PDF)",
-                        type="pdf"
+        if domain_metrics:
+            st.subheader("Customize Evaluation Metrics")
+            st.info("Adjust weights (0-1) for each metric. Set to 0 to exclude a metric.")
+            
+            # Display metrics in two columns
+            col1, col2 = st.columns(2)
+            metric_weights = {}
+            
+            for i, (metric, description) in enumerate(domain_metrics.items()):
+                with col1 if i < len(domain_metrics)/2 else col2:
+                    weight = st.slider(
+                        f"{metric.replace('_', ' ').title()}",
+                        0.0,
+                        1.0,
+                        0.5,
+                        0.1,
+                        help=description
                     )
-                with col2:
-                    resume_files = st.file_uploader(
-                        "Upload Resumes (PDF)",
-                        type=['pdf'],
-                        accept_multiple_files=True
-                    )
+                    metric_weights[metric] = weight
 
-                if job_description_file and resume_files and any(metric_weights.values()):
-                    if st.button("Evaluate Resumes"):
-                        # Create resume evaluator with domain metrics and weights
-                        resume_evaluator = ClaudeResumeEvaluator(
-                            api_key,
-                            domain_metrics=domain_metrics,
-                            weights=domain_evaluator.weights
-                        )
-                        
-                        with st.spinner("Evaluating resumes... This may take a few minutes."):
-                            try:
-                                results_df = resume_evaluator.evaluate_multiple_resumes(
-                                    resume_files,
-                                    job_description_file
-                                )
+            # Set evaluation metrics
+            domain_evaluator.set_evaluation_metrics(metric_weights)
+
+            # File uploaders
+            st.subheader("Upload Documents")
+            col1, col2 = st.columns(2)
+            with col1:
+                job_description_file = st.file_uploader(
+                    "Upload Job Description (PDF)",
+                    type="pdf"
+                )
+            with col2:
+                resume_files = st.file_uploader(
+                    "Upload Resumes (PDF)",
+                    type=['pdf'],
+                    accept_multiple_files=True
+                )
+
+            if job_description_file and resume_files and any(metric_weights.values()):
+                if st.button("Evaluate Resumes"):
+                    # Create resume evaluator with domain metrics and weights
+                    resume_evaluator = ClaudeResumeEvaluator(
+                        api_key,
+                        domain_metrics=domain_metrics,
+                        weights=domain_evaluator.weights
+                    )
+                    
+                    with st.spinner("Evaluating resumes... This may take a few minutes."):
+                        try:
+                            results_df = resume_evaluator.evaluate_multiple_resumes(
+                                resume_files,
+                                job_description_file
+                            )
+                            
+                            if not results_df.empty:
+                                # Display results in tabs
+                                tab1, tab2 = st.tabs(["Summary", "Detailed Analysis"])
                                 
-                                if not results_df.empty:
-                                    # Display results in tabs
-                                    tab1, tab2 = st.tabs(["Summary", "Detailed Analysis"])
-                                    
-                                    with tab1:
-                                        st.dataframe(
-                                            results_df[[col for col in results_df.columns 
-                                                      if not col.endswith('_justification')]],
-                                            use_container_width=True
-                                        )
-                                    
-                                    with tab2:
-                                        for _, row in results_df.iterrows():
-                                            with st.expander(f"Detailed Analysis - {row['resume_file']}"):
-                                                for metric in domain_metrics:
-                                                    st.subheader(metric.replace('_', ' ').title())
-                                                    col1, col2 = st.columns([1, 3])
-                                                    with col1:
-                                                        st.metric(
-                                                            "Score",
-                                                            f"{row[f'{metric}_score']:.2f}"
-                                                        )
-                                                    with col2:
-                                                        st.write(row[f'{metric}_justification'])
+                                with tab1:
+                                    st.dataframe(
+                                        results_df[[col for col in results_df.columns 
+                                                  if not col.endswith('_justification')]],
+                                        use_container_width=True
+                                    )
+                                
+                                with tab2:
+                                    for _, row in results_df.iterrows():
+                                        with st.expander(f"Detailed Analysis - {row['resume_file']}"):
+                                            for metric in domain_metrics:
+                                                st.subheader(metric.replace('_', ' ').title())
+                                                col1, col2 = st.columns([1, 3])
+                                                with col1:
+                                                    st.metric(
+                                                        "Score",
+                                                        f"{row[f'{metric}_score']:.2f}"
+                                                    )
+                                                with col2:
+                                                    st.write(row[f'{metric}_justification'])
 
-                            except Exception as e:
-                                st.error(f"An error occurred during evaluation: {str(e)}")
+                        except Exception as e:
+                            st.error(f"An error occurred during evaluation: {str(e)}")
 
 if __name__ == "__main__":
     main()
