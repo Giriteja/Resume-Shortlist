@@ -85,16 +85,14 @@ def evaluate_answer(client: anthropic.Client, question: Dict, response: str, que
             return {
                 "technical_accuracy_score": 0,
                 "problem_solving_score": 0,
-                "code_quality_score": 0,
                 "technical_depth_score": 0,
-                "implementation_feasibility_score": 0,
                 "overall_score": 0,
                 "feedback": "Error in evaluation"
             }
         else:
             return {
                 "relevance_clarity_score": 0,
-                "experience_skills_score": 0,
+                "communication_skills_score": 0,
                 "motivation_enthusiasm_score": 0,
                 "cultural_fit_score": 0,
                 "professional_growth_score": 0,
@@ -253,14 +251,11 @@ def show_test_results(candidate_name: str, client: anthropic.Client):
                             st.metric("Technical Accuracy", f"{evaluation['technical_accuracy_score']}/10")
                             st.metric("Problem Solving", f"{evaluation['problem_solving_score']}/10")
                         with col2:
-                            st.metric("Code Quality", f"{evaluation['code_quality_score']}/10")
                             st.metric("Technical Depth", f"{evaluation['technical_depth_score']}/10")
-                        with col3:
-                            st.metric("Implementation Feasibility", f"{evaluation['implementation_feasibility_score']}/10")
                     else:  # behavioral
                         with col1:
                             st.metric("Relevance & Clarity", f"{evaluation['relevance_clarity_score']}/10")
-                            st.metric("Experience & Skills", f"{evaluation['experience_skills_score']}/10")
+                            st.metric("Communication", f"{evaluation['communication_skills_score']}/10")
                         with col2:
                             st.metric("Motivation & Enthusiasm", f"{evaluation['motivation_enthusiasm_score']}/10")
                             st.metric("Cultural Fit", f"{evaluation['cultural_fit_score']}/10")
