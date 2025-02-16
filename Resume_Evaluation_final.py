@@ -12,6 +12,99 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 logger = getLogger(__name__)
+
+def get_evaluation_prompt(question_type: str, question: Dict, response: str) -> str:
+    """
+    Generate appropriate evaluation prompt based on question type
+    """
+    if question_type == 'technical':
+        return f"""
+        Technical Question: {question['question']}
+        
+        Candidate's Response: {response}
+        
+        Expected Answer Points:
+        {chr(10).join('- ' + point for point in question['expected_answer_points'])}
+        
+        Please evaluate the technical response on the following parameters (score out of 10 for each):
+        1. Technical Accuracy: Correctness of technical concepts and implementation details
+        2. Problem Solving: Approach to solving the technical problem and methodology
+        3. Code Quality: If code is involved, evaluate its efficiency, readability, and best practices
+        4. Technical Depth: Understanding of underlying concepts and technical implications
+        5. Implementation Feasibility: Practicality and feasibility of the proposed solution
+        
+        Provide scores and brief justification for each parameter, then calculate an overall score (out of 10).
+        Format your response as a JSON object with these exact keys: technical_accuracy_score, problem_solving_score, code_quality_score, technical_depth_score, implementation_feasibility_score, overall_score, and feedback.
+        """
+    else:  # behavioral
+        return f"""
+        Behavioral Question: {question['question']}
+        
+        Candidate's Response: {response}
+        
+        Expected Answer Points:
+        {chr(10).join('- ' + point for point in question['expected_answer_points'])}
+        
+        Please evaluate the behavioral response on the following parameters (score out of 10 for each):
+        1. Relevance & Clarity: How well the response addresses the question and clarity of expression
+        2. Experience & Skills: Demonstration of relevant experience, skills, and achievements
+        3. Motivation & Enthusiasm: Level of genuine interest, motivation, and positive attitude
+        4. Cultural Fit: Alignment with company values and team culture
+        5. Professional Growth: Evidence of career progression and learning mindset
+        
+        For questions about previous experience or projects, also consider:
+        - Specific role and responsibilities
+        - Challenges faced and solutions implemented
+        - Impact and outcomes achieved
+        - Technologies and methodologies used
+        
+        Provide scores and brief justification for each parameter, then calculate an overall score (out of 10).
+        Format your response as a JSON object with these exact keys: relevance_clarity_score, experience_skills_score, motivation_enthusiasm_score, cultural_fit_score, professional_growth_score, overall_score, and feedback.
+        """
+
+def evaluate_answer(client: anthropic.Client, question: Dict, response: str, question_type: str) -> Dict:
+    """
+    Evaluate a single answer using Claude API with type-specific criteria
+    """
+    evaluation_prompt = get_evaluation_prompt(question_type, question, response)
+    
+    message = client.messages.create(
+        model="claude-3-sonnet-20240229",
+        max_tokens=1000,
+        temperature=0,
+        messages=[{
+            "role": "user",
+            "content": evaluation_prompt
+        }]
+    )
+    
+    try:
+        evaluation = message.content[0].text
+        return eval(evaluation)
+    except Exception as e:
+        st.error(f"Error parsing Claude's response: {e}")
+        if question_type == 'technical':
+            return {
+                "technical_accuracy_score": 0,
+                "problem_solving_score": 0,
+                "code_quality_score": 0,
+                "technical_depth_score": 0,
+                "implementation_feasibility_score": 0,
+                "overall_score": 0,
+                "feedback": "Error in evaluation"
+            }
+        else:
+            return {
+                "relevance_clarity_score": 0,
+                "experience_skills_score": 0,
+                "motivation_enthusiasm_score": 0,
+                "cultural_fit_score": 0,
+                "professional_growth_score": 0,
+                "overall_score": 0,
+                "feedback": "Error in evaluation"
+            }
+
+
 class TestGenerator:
     def __init__(self, client):
         self.client = client
@@ -117,10 +210,16 @@ def show_online_test(domain: str, role_description: str, candidate_name: str):
             st.balloons()
 
 # Add these functions to your main code
-def show_test_results(candidate_name: str):
+def show_test_results(candidate_name: str, client: anthropic.Client):
+    """
+    Display test results with type-specific evaluation scores
+    """
     if 'test_responses' in st.session_state and candidate_name in st.session_state.test_responses:
-        st.subheader("Test Responses")
+        st.subheader("Test Responses and Evaluation")
         responses = st.session_state.test_responses[candidate_name]
+        
+        total_score = 0
+        question_count = 0
         
         for q_type in ['technical', 'behavioral']:
             st.write(f"\n{q_type.title()} Questions:")
@@ -129,11 +228,60 @@ def show_test_results(candidate_name: str):
             for i, question in enumerate(questions, 1):
                 with st.expander(f"Question {i}: {question['question']}"):
                     response_key = f"{q_type}_{i}"
+                    response = responses['responses'][response_key]
+                    
                     st.write("Response:")
-                    st.write(responses['responses'][response_key])
+                    st.write(response)
+                    
                     st.write("\nExpected Answer Points:")
                     for point in question['expected_answer_points']:
                         st.write(f"- {point}")
+                    
+                    if 'evaluations' not in responses:
+                        responses['evaluations'] = {}
+                    
+                    if response_key not in responses['evaluations']:
+                        with st.spinner("Evaluating response..."):
+                            evaluation = evaluate_answer(client, question, response, q_type)
+                            responses['evaluations'][response_key] = evaluation
+                    else:
+                        evaluation = responses['evaluations'][response_key]
+                    
+                    st.write("\nEvaluation Scores:")
+                    col1, col2, col3 = st.columns(3)
+                    
+                    if q_type == 'technical':
+                        with col1:
+                            st.metric("Technical Accuracy", f"{evaluation['technical_accuracy_score']}/10")
+                            st.metric("Problem Solving", f"{evaluation['problem_solving_score']}/10")
+                        with col2:
+                            st.metric("Code Quality", f"{evaluation['code_quality_score']}/10")
+                            st.metric("Technical Depth", f"{evaluation['technical_depth_score']}/10")
+                        with col3:
+                            st.metric("Implementation Feasibility", f"{evaluation['implementation_feasibility_score']}/10")
+                    else:  # behavioral
+                        with col1:
+                            st.metric("Relevance & Clarity", f"{evaluation['relevance_clarity_score']}/10")
+                            st.metric("Experience & Skills", f"{evaluation['experience_skills_score']}/10")
+                        with col2:
+                            st.metric("Motivation & Enthusiasm", f"{evaluation['motivation_enthusiasm_score']}/10")
+                            st.metric("Cultural Fit", f"{evaluation['cultural_fit_score']}/10")
+                        with col3:
+                            st.metric("Professional Growth", f"{evaluation['professional_growth_score']}/10")
+                    
+                    st.metric("Overall Score", f"{evaluation['overall_score']}/10")
+                    st.write("\nDetailed Feedback:")
+                    st.write(evaluation['feedback'])
+                    
+                    total_score += evaluation['overall_score']
+                    question_count += 1
+        
+        if question_count > 0:
+            final_score = total_score / question_count
+            st.subheader("Final Evaluation")
+            st.metric("Average Score Across All Questions", f"{final_score:.1f}/10")
+            
+        st.session_state.test_responses[candidate_name] = responses
 
 class DynamicDomainEvaluator:
     def __init__(self, api_key: str):
