@@ -35,7 +35,7 @@ class TestGenerator:
         Make questions specific to the domain and varying in difficulty."""
 
         try:
-            response = self.client.messages.create(
+            response = _self.client.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=1500,
                 temperature=0.2,
@@ -46,7 +46,7 @@ class TestGenerator:
             st.error(f"Error generating technical questions: {str(e)}")
             return []
 
-    def get_behavioral_questions(self) -> List[Dict]:
+    def get_behavioral_questions(_self) -> List[Dict]:
         return [
             {
                 "question": "Tell me about yourself",
