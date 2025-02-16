@@ -29,9 +29,7 @@ def get_evaluation_prompt(question_type: str, question: Dict, response: str) -> 
         Please evaluate the technical response on the following parameters (score out of 10 for each):
         1. Technical Accuracy: Correctness of technical concepts and implementation details
         2. Problem Solving: Approach to solving the technical problem and methodology
-        3. Code Quality: If code is involved, evaluate its efficiency, readability, and best practices
-        4. Technical Depth: Understanding of underlying concepts and technical implications
-        5. Implementation Feasibility: Practicality and feasibility of the proposed solution
+        3. Technical Depth: Understanding of underlying concepts and technical implications
         
         Provide scores and brief justification for each parameter, then calculate an overall score (out of 10).
         Format your response as a JSON object with these exact keys: technical_accuracy_score, problem_solving_score, code_quality_score, technical_depth_score, implementation_feasibility_score, overall_score, and feedback.
@@ -47,7 +45,7 @@ def get_evaluation_prompt(question_type: str, question: Dict, response: str) -> 
         
         Please evaluate the behavioral response on the following parameters (score out of 10 for each):
         1. Relevance & Clarity: How well the response addresses the question and clarity of expression
-        2. Experience & Skills: Demonstration of relevant experience, skills, and achievements
+        2. Communication Skills: Demonstration of Communication skills
         3. Motivation & Enthusiasm: Level of genuine interest, motivation, and positive attitude
         4. Cultural Fit: Alignment with company values and team culture
         5. Professional Growth: Evidence of career progression and learning mindset
