@@ -45,10 +45,9 @@ def get_evaluation_prompt(question_type: str, question: Dict, response: str) -> 
         
         Please evaluate the behavioral response on the following parameters (score out of 10 for each):
         1. Relevance & Clarity: How well the response addresses the question and clarity of expression
-        2. Communication Skills: Demonstration of Communication skills
-        3. Motivation & Enthusiasm: Level of genuine interest, motivation, and positive attitude
-        4. Cultural Fit: Alignment with company values and team culture
-        5. Professional Growth: Evidence of career progression and learning mindset
+        2. Motivation & Enthusiasm: Level of genuine interest, motivation, and positive attitude
+        3. Cultural Fit: Alignment with company values and team culture
+        4. Professional Growth: Evidence of career progression and learning mindset
         
         For questions about previous experience or projects, also consider:
         - Specific role and responsibilities
@@ -92,7 +91,6 @@ def evaluate_answer(client: anthropic.Client, question: Dict, response: str, que
         else:
             return {
                 "relevance_clarity_score": 0,
-                "communication_skills_score": 0,
                 "motivation_enthusiasm_score": 0,
                 "cultural_fit_score": 0,
                 "professional_growth_score": 0,
@@ -255,7 +253,6 @@ def show_test_results(candidate_name: str, client: anthropic.Client):
                     else:  # behavioral
                         with col1:
                             st.metric("Relevance & Clarity", f"{evaluation['relevance_clarity_score']}/10")
-                            st.metric("Communication", f"{evaluation['communication_skills_score']}/10")
                         with col2:
                             st.metric("Motivation & Enthusiasm", f"{evaluation['motivation_enthusiasm_score']}/10")
                             st.metric("Cultural Fit", f"{evaluation['cultural_fit_score']}/10")
