@@ -12,7 +12,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 logger = getLogger(__name__)
-
 class TestGenerator:
     def __init__(self, client):
         self.client = client
