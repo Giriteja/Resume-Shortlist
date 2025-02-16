@@ -13,6 +13,129 @@ import plotly.express as px
 
 logger = getLogger(__name__)
 
+class TestGenerator:
+    def __init__(self, client):
+        self.client = client
+
+    @st.cache_data
+    def generate_technical_questions(self, domain: str, role_description: str) -> List[Dict]:
+        prompt = f"""Generate 5 technical interview questions for the {domain} domain.
+        Role context: {role_description}
+        
+        Return the questions in this JSON format:
+        {{
+            "questions": [
+                {{
+                    "question": "technical question here",
+                    "type": "technical",
+                    "expected_answer_points": ["key point 1", "key point 2", "key point 3"]
+                }}
+            ]
+        }}
+        
+        Make questions specific to the domain and varying in difficulty."""
+
+        try:
+            response = self.client.messages.create(
+                model="claude-3-sonnet-20240229",
+                max_tokens=1500,
+                temperature=0.2,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return json.loads(response.content[0].text)["questions"]
+        except Exception as e:
+            st.error(f"Error generating technical questions: {str(e)}")
+            return []
+
+    def get_behavioral_questions(self) -> List[Dict]:
+        return [
+            {
+                "question": "Tell me about yourself",
+                "type": "behavioral",
+                "expected_answer_points": ["background", "relevant experience", "key achievements", "career goals"]
+            },
+            {
+                "question": "Why do you want to join our company?",
+                "type": "behavioral",
+                "expected_answer_points": ["company values alignment", "growth opportunities", "industry interest", "specific company achievements"]
+            },
+            {
+                "question": "Where do you see yourself in 5 years?",
+                "type": "behavioral",
+                "expected_answer_points": ["career progression", "skill development", "leadership goals", "industry impact"]
+            }
+        ]
+
+def show_online_test(domain: str, role_description: str, candidate_name: str):
+    st.title("Online Assessment")
+    st.write(f"Candidate: {candidate_name}")
+    st.write(f"Domain: {domain}")
+    
+    # Initialize test generator
+    test_generator = TestGenerator(anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"]))
+    
+    # Generate questions
+    technical_questions = test_generator.generate_technical_questions(domain, role_description)
+    behavioral_questions = test_generator.get_behavioral_questions()
+    
+    # Combine all questions
+    all_questions = technical_questions + behavioral_questions
+    
+    # Create a form for the test
+    with st.form("online_test_form"):
+        responses = {}
+        
+        st.subheader("Technical Questions")
+        for i, q in enumerate(technical_questions, 1):
+            st.write(f"\n{i}. {q['question']}")
+            responses[f"technical_{i}"] = st.text_area(
+                f"Your answer for question {i}",
+                key=f"tech_{i}",
+                height=150,
+                label_visibility="collapsed"
+            )
+        
+        st.subheader("Behavioral Questions")
+        for i, q in enumerate(behavioral_questions, 1):
+            st.write(f"\n{i}. {q['question']}")
+            responses[f"behavioral_{i}"] = st.text_area(
+                f"Your answer for behavioral question {i}",
+                key=f"beh_{i}",
+                height=150,
+                label_visibility="collapsed"
+            )
+        
+        submitted = st.form_submit_button("Submit Test")
+        if submitted:
+            # Save responses
+            if 'test_responses' not in st.session_state:
+                st.session_state.test_responses = {}
+            st.session_state.test_responses[candidate_name] = {
+                'responses': responses,
+                'questions': all_questions
+            }
+            st.success("Test submitted successfully!")
+            st.balloons()
+
+# Add these functions to your main code
+def show_test_results(candidate_name: str):
+    if 'test_responses' in st.session_state and candidate_name in st.session_state.test_responses:
+        st.subheader("Test Responses")
+        responses = st.session_state.test_responses[candidate_name]
+        
+        for q_type in ['technical', 'behavioral']:
+            st.write(f"\n{q_type.title()} Questions:")
+            questions = [q for q in responses['questions'] if q['type'] == q_type]
+            
+            for i, question in enumerate(questions, 1):
+                with st.expander(f"Question {i}: {question['question']}"):
+                    response_key = f"{q_type}_{i}"
+                    st.write("Response:")
+                    st.write(responses['responses'][response_key])
+                    st.write("\nExpected Answer Points:")
+                    for point in question['expected_answer_points']:
+                        st.write(f"- {point}")
+
 class DynamicDomainEvaluator:
     def __init__(self, api_key: str):
         self.client = anthropic.Anthropic(api_key=api_key)
@@ -308,7 +431,7 @@ def main():
                             
                             if not results_df.empty:
                                 # Display results in tabs
-                                tab1, tab2 = st.tabs(["Summary", "Detailed Analysis"])
+                                tab1, tab2, tab3 = st.tabs(["Summary", "Detailed Analysis", "Online Test"])
                                 
                                 with tab1:
                                     st.dataframe(
@@ -316,6 +439,21 @@ def main():
                                                   if not col.endswith('_justification')]],
                                         use_container_width=True
                                     )
+
+                                    st.subheader("Take Online Test")
+                                    selected_candidate = st.selectbox(
+                                        "Select candidate to test",
+                                        results_df['resume_file'].tolist()
+                                    )
+
+                                    col1, col2 = st.columns(2)
+                                    with col1:
+                                        if st.button("Start Online Test", key="start_test"):
+                                            st.session_state.show_test = True
+                                            st.session_state.test_candidate = selected_candidate
+                                    with col2:
+                                        if st.button("View Test Results", key="view_results"):
+                                            show_test_results(selected_candidate)
                                 
                                 with tab2:
                                     for _, row in results_df.iterrows():
@@ -330,6 +468,10 @@ def main():
                                                     )
                                                 with col2:
                                                     st.write(row[f'{metric}_justification'])
+
+                            with tab3:
+                                if 'show_test' in st.session_state and st.session_state.show_test:
+                                    show_online_test(domain, role_description, st.session_state.test_candidate)
 
                         except Exception as e:
                             st.error(f"An error occurred during evaluation: {str(e)}")
