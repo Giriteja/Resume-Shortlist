@@ -348,6 +348,14 @@ def main():
     st.set_page_config(page_title="Dynamic Resume Evaluator", layout="wide")
     st.title("Dynamic Resume Evaluator")
 
+    # Initialize session state variables if they don't exist
+    if 'show_test' not in st.session_state:
+        st.session_state.show_test = False
+    if 'test_candidate' not in st.session_state:
+        st.session_state.test_candidate = None
+    if 'current_tab' not in st.session_state:
+        st.session_state.current_tab = "Summary"
+
     api_key = st.secrets["ANTHROPIC_API_KEY"]
     
     if not api_key:
@@ -369,9 +377,8 @@ def main():
             help="Add specific details about the role to get more targeted evaluation metrics"
         )
 
-    # Generate metrics when domain is entered - now cached
+    # Generate metrics when domain is entered
     if domain:
-        # This will only run once for each unique combination of domain and role_description
         domain_metrics = domain_evaluator.get_domain_metrics(domain, role_description)
             
         if domain_metrics:
@@ -429,51 +436,72 @@ def main():
                             )
                             
                             if not results_df.empty:
-                                # Display results in tabs
-                                tab1, tab2, tab3 = st.tabs(["Summary", "Detailed Analysis", "Online Test"])
-                                
-                                with tab1:
-                                    st.dataframe(
-                                        results_df[[col for col in results_df.columns 
-                                                  if not col.endswith('_justification')]],
-                                        use_container_width=True
-                                    )
-
-                                    st.subheader("Take Online Test")
-                                    selected_candidate = st.selectbox(
-                                        "Select candidate to test",
-                                        results_df['resume_file'].tolist()
-                                    )
-
-                                    col1, col2 = st.columns(2)
-                                    with col1:
-                                        if st.button("Start Online Test", key="start_test"):
-                                            st.session_state.show_test = True
-                                            st.session_state.test_candidate = selected_candidate
-                                    with col2:
-                                        if st.button("View Test Results", key="view_results"):
-                                            show_test_results(selected_candidate)
-                                
-                                with tab2:
-                                    for _, row in results_df.iterrows():
-                                        with st.expander(f"Detailed Analysis - {row['resume_file']}"):
-                                            for metric in domain_metrics:
-                                                st.subheader(metric.replace('_', ' ').title())
-                                                col1, col2 = st.columns([1, 3])
-                                                with col1:
-                                                    st.metric(
-                                                        "Score",
-                                                        f"{row[f'{metric}_score']:.2f}"
-                                                    )
-                                                with col2:
-                                                    st.write(row[f'{metric}_justification'])
-
-                            with tab3:
-                                if 'show_test' in st.session_state and st.session_state.show_test:
-                                    show_online_test(domain, role_description, st.session_state.test_candidate)
+                                # Store results in session state
+                                st.session_state.results_df = results_df
+                                st.session_state.domain = domain
+                                st.session_state.role_description = role_description
 
                         except Exception as e:
                             st.error(f"An error occurred during evaluation: {str(e)}")
+
+            # Check if we have results to display
+            if hasattr(st.session_state, 'results_df'):
+                # Create tabs
+                tabs = ["Summary", "Detailed Analysis", "Online Test"]
+                tab1, tab2, tab3 = st.tabs(tabs)
+
+                with tab1:
+                    st.dataframe(
+                        st.session_state.results_df[[col for col in st.session_state.results_df.columns 
+                                  if not col.endswith('_justification')]],
+                        use_container_width=True
+                    )
+                    
+                    # Add online test section
+                    st.subheader("Online Test Section")
+                    selected_candidate = st.selectbox(
+                        "Select candidate for test",
+                        st.session_state.results_df['resume_file'].tolist()
+                    )
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("Take Test"):
+                            st.session_state.show_test = True
+                            st.session_state.test_candidate = selected_candidate
+                            st.session_state.current_tab = "Online Test"
+                            st.experimental_rerun()
+                            
+                    with col2:
+                        if st.button("View Results"):
+                            if 'test_responses' in st.session_state and selected_candidate in st.session_state.test_responses:
+                                show_test_results(selected_candidate)
+                            else:
+                                st.warning("No test results available for this candidate yet.")
+                
+                with tab2:
+                    for _, row in st.session_state.results_df.iterrows():
+                        with st.expander(f"Detailed Analysis - {row['resume_file']}"):
+                            for metric in domain_metrics:
+                                st.subheader(metric.replace('_', ' ').title())
+                                col1, col2 = st.columns([1, 3])
+                                with col1:
+                                    st.metric(
+                                        "Score",
+                                        f"{row[f'{metric}_score']:.2f}"
+                                    )
+                                with col2:
+                                    st.write(row[f'{metric}_justification'])
+                
+                with tab3:
+                    if st.session_state.show_test:
+                        show_online_test(
+                            st.session_state.domain,
+                            st.session_state.role_description,
+                            st.session_state.test_candidate
+                        )
+                    else:
+                        st.info("Please select a candidate and click 'Take Test' in the Summary tab to start the assessment.")
 
 if __name__ == "__main__":
     main()
