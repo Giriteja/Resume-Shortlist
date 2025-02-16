@@ -623,7 +623,7 @@ def main():
                     with col2:
                         if st.button("View Results"):
                             if 'test_responses' in st.session_state and selected_candidate in st.session_state.test_responses:
-                                show_test_results(selected_candidate)
+                                show_test_results(selected_candidate,api_key)
                             else:
                                 st.warning("No test results available for this candidate yet.")
                 
