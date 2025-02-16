@@ -14,6 +14,77 @@ import plotly.express as px
 logger = getLogger(__name__)
 
 
+class DynamicDomainEvaluator:
+    def __init__(self, api_key: str):
+        self.client = anthropic.Anthropic(api_key=api_key)
+        self.domain_metrics = {}
+        self.selected_metrics = {}
+        self.weights = {}
+
+    def get_domain_metrics(self, domain: str, role_description: str = "") -> Dict[str, str]:
+        """Get metrics for any domain using Claude"""
+        prompt = f"""As an expert HR professional, generate relevant evaluation metrics for the {domain} domain.
+        Additional role context: {role_description}
+        
+        Generate 8-10 key evaluation metrics that are most important for this domain. 
+        Each metric should have a name and detailed description.
+        
+        Return the metrics in this exact JSON format:
+        {{
+            "metric_name": "detailed description",
+            "metric_name2": "detailed description2"
+        }}
+        
+        The metric names should be in snake_case and descriptions should be comprehensive.
+        Focus on domain-specific technical and professional competencies."""
+
+        try:
+            response = self.client.messages.create(
+                model="claude-3-sonnet-20240229",
+                max_tokens=1000,
+                temperature=0,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            metrics = json.loads(response.content[0].text)
+            self.domain_metrics = metrics
+            return metrics
+        except Exception as e:
+            st.error(f"Error generating metrics: {str(e)}")
+            return {}
+
+    def set_evaluation_metrics(self, metrics: Dict[str, float]):
+        """Set the metrics and weights for evaluation"""
+        self.selected_metrics = {k: v for k, v in metrics.items() if v > 0}
+        total_weight = sum(self.selected_metrics.values())
+        if total_weight > 0:
+            self.weights = {k: v/total_weight for k, v in self.selected_metrics.items()}
+        else:
+            self.weights = {}
+
+    def _create_evaluation_prompt(self, resume_text: str, job_description: str) -> str:
+        """Create domain-specific evaluation prompt"""
+        return f"""As an expert HR professional, evaluate this resume against the job description.
+        For each criterion, provide a numerical score between 0.0 and 1.0 and a brief justification.
+        
+        Job Description:
+        {job_description}
+
+        Resume:
+        {resume_text}
+
+        Criteria to evaluate:
+        {json.dumps(self.domain_metrics, indent=2)}
+
+        Return your evaluation in this exact JSON format:
+        {{
+            {','.join(f'"{metric}": {{"score": 0.0, "justification": "explanation"}}' for metric in self.selected_metrics.keys())}
+        }}
+
+        Provide specific evidence from the resume to justify each score.
+        """
+
+
 @dataclass
 class EvaluationCriteria:
     """Defines evaluation criteria and weights"""
@@ -378,70 +449,137 @@ class ClaudeResumeEvaluator:
 
 
 def main():
-    
-    st.set_page_config(page_title="Resume Evaluator", layout="wide")
-    st.title("Resume Evaluator")
+    st.set_page_config(page_title="Dynamic Resume Evaluator", layout="wide")
+    st.title("Dynamic Resume Evaluator")
 
-    # Get API key from environment or Streamlit secrets
     api_key = st.secrets["ANTHROPIC_API_KEY"]
-
+    
     if not api_key:
-        st.error(
-            "Please set the ANTHROPIC_API_KEY in environment variables or Streamlit secrets."
-        )
+        st.error("Please set the ANTHROPIC_API_KEY in environment variables or Streamlit secrets.")
         return
 
-    try:
-        evaluator = ClaudeResumeEvaluator(api_key)
-    except Exception as e:
-        st.error(f"Error initializing evaluator: {str(e)}")
-        return
+    evaluator = DynamicDomainEvaluator(api_key)
 
+    # Domain input
     col1, col2 = st.columns(2)
-
     with col1:
-        job_description_file = st.file_uploader(
-            "Upload Job Description (PDF)", type="pdf"
+        domain = st.text_input(
+            "Enter Job Domain",
+            help="e.g., 'Software Engineering', 'Data Science', 'Digital Marketing'"
         )
-
     with col2:
-        resume_files = st.file_uploader(
-            "Upload Resumes (PDF)", type=['pdf', 'doc', 'docx'], accept_multiple_files=True
+        role_description = st.text_area(
+            "Role Description (Optional)",
+            help="Add specific details about the role to get more targeted evaluation metrics"
         )
 
-    if job_description_file and resume_files:
-        if st.button("Evaluate Resumes"):
-            with st.spinner("Evaluating resumes... This may take a few minutes."):
-                try:
-                    results_df = evaluator.evaluate_multiple_resumes(
-                        resume_files, job_description_file
+    # Generate metrics when domain is entered
+    if domain:
+        with st.spinner("Generating domain-specific evaluation metrics..."):
+            domain_metrics = evaluator.get_domain_metrics(domain, role_description)
+            
+            if domain_metrics:
+                st.subheader("Customize Evaluation Metrics")
+                st.info("Adjust weights (0-1) for each metric. Set to 0 to exclude a metric.")
+                
+                # Display metrics in two columns
+                col1, col2 = st.columns(2)
+                metric_weights = {}
+                
+                for i, (metric, description) in enumerate(domain_metrics.items()):
+                    with col1 if i < len(domain_metrics)/2 else col2:
+                        weight = st.slider(
+                            f"{metric.replace('_', ' ').title()}",
+                            0.0,
+                            1.0,
+                            0.5,
+                            0.1,
+                            help=description
+                        )
+                        metric_weights[metric] = weight
+
+                # Set evaluation metrics
+                evaluator.set_evaluation_metrics(metric_weights)
+
+                # File uploaders
+                st.subheader("Upload Documents")
+                col1, col2 = st.columns(2)
+                with col1:
+                    job_description_file = st.file_uploader(
+                        "Upload Job Description (PDF)",
+                        type="pdf"
+                    )
+                with col2:
+                    resume_files = st.file_uploader(
+                        "Upload Resumes (PDF)",
+                        type=['pdf'],
+                        accept_multiple_files=True
                     )
 
-                    if not results_df.empty:
-                        st.subheader("Evaluation Results")
-                        st.dataframe(results_df, use_container_width=True)
-                        evaluator.create_analytics_dashboard(results_df)
+                if job_description_file and resume_files and any(metric_weights.values()):
+                    if st.button("Evaluate Resumes"):
+                        with st.spinner("Evaluating resumes... This may take a few minutes."):
+                            try:
+                                results_df = evaluator.evaluate_multiple_resumes(
+                                    resume_files,
+                                    job_description_file
+                                )
+                                
+                                if not results_df.empty:
+                                    # Create tabs for different views
+                                    tab1, tab2, tab3 = st.tabs([
+                                        "Summary Scores",
+                                        "Detailed Analysis",
+                                        "Comparative View"
+                                    ])
+                                    
+                                    with tab1:
+                                        st.dataframe(
+                                            results_df[[col for col in results_df.columns 
+                                                      if not col.endswith('_justification')]],
+                                            use_container_width=True
+                                        )
+                                    
+                                    with tab2:
+                                        # Detailed analysis for each resume
+                                        for _, row in results_df.iterrows():
+                                            with st.expander(f"Detailed Analysis - {row['resume_file']}"):
+                                                for metric in evaluator.selected_metrics:
+                                                    st.subheader(metric.replace('_', ' ').title())
+                                                    col1, col2 = st.columns([1, 3])
+                                                    with col1:
+                                                        st.metric(
+                                                            "Score",
+                                                            f"{row[f'{metric}_score']:.2f}"
+                                                        )
+                                                    with col2:
+                                                        st.write(row[f'{metric}_justification'])
+                                    
+                                    with tab3:
+                                        # Radar chart for comparison
+                                        score_cols = [col for col in results_df.columns 
+                                                    if col.endswith('_score') 
+                                                    and col != 'total_score']
+                                        
+                                        fig = go.Figure()
+                                        for _, row in results_df.iterrows():
+                                            fig.add_trace(go.Scatterpolar(
+                                                r=[row[col] for col in score_cols],
+                                                theta=[col.replace('_score', '')
+                                                      .replace('_', ' ').title() 
+                                                      for col in score_cols],
+                                                fill='toself',
+                                                name=row['resume_file']
+                                            ))
+                                        
+                                        fig.update_layout(
+                                            polar=dict(radialaxis=dict(range=[0, 1])),
+                                            showlegend=True
+                                        )
+                                        st.plotly_chart(fig, use_container_width=True)
 
-                        st.subheader("Detailed Reports")
-                        #st.write(results_df)
-                        for _, row in results_df.iterrows():
-                            with st.expander(f"Detailed Report - {row['resume_file']}"):
-                                evaluation = {
-                                    "resume_file": row["resume_file"],
-                                    "total_score": row["total_score"]
-                                }
-                                for criterion in evaluator.criteria.weights.keys():
-                                    evaluation[f"{criterion}_score"] = row[f"{criterion}_score"]
-                                    evaluation[f"{criterion}_justification"] = row[f"{criterion}_justification"]
-                                st.text(evaluator.generate_detailed_report(evaluation))
-                    else:
-                        st.warning(
-                            "No evaluations were generated. Please check the uploaded files and try again."
-                        )
-
-
-                except Exception as e:
-                    st.error(f"An error occurred during evaluation: {str(e)}")
+                            except Exception as e:
+                                st.error(f"An error occurred during evaluation: {str(e)}")
 
 
 if __name__ == "__main__":
