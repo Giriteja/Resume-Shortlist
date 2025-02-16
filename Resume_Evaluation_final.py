@@ -17,7 +17,7 @@ class TestGenerator:
         self.client = client
 
     @st.cache_data
-    def generate_technical_questions(self, domain: str, role_description: str) -> List[Dict]:
+    def generate_technical_questions(_self, domain: str, role_description: str) -> List[Dict]:
         prompt = f"""Generate 5 technical interview questions for the {domain} domain.
         Role context: {role_description}
         
