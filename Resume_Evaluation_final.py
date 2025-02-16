@@ -470,7 +470,7 @@ def main():
                             st.session_state.show_test = True
                             st.session_state.test_candidate = selected_candidate
                             st.session_state.current_tab = "Online Test"
-                            st.experimental_rerun()
+                            st.rerun()
                             
                     with col2:
                         if st.button("View Results"):
