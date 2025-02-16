@@ -518,6 +518,7 @@ def main():
 
                 if job_description_file and resume_files and any(metric_weights.values()):
                     if st.button("Evaluate Resumes"):
+                        evaluator = ClaudeResumeEvaluator(api_key)
                         with st.spinner("Evaluating resumes... This may take a few minutes."):
                             try:
                                 results_df = evaluator.evaluate_multiple_resumes(
